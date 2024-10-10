@@ -119,9 +119,40 @@ REFRESH MATERIALIZED VIEW mv_spectrum_feedback;
 -- Materialized views are not supported
 -- This results in error: ERROR: Trying to make internal datasharing request for auto mounted catalog.
 CREATE MATERIALIZED VIEW mv_datacatalog_view AS
-SELECT     * FROM     "awsdatacatalog"."default"."dmscoffeedata"; 
+SELECT * FROM "awsdatacatalog"."default"."dmscoffeedata"; 
 SHOW data_catalog_auto_mount;
 
 -- Additional information
 select * from SVV_EXTERNAL_SCHEMAS;
 select * from SVV_TABLE_INFO;
+
+
+-- Auto-copy
+CREATE  TABLE public.feedback (
+id integer,
+feedback char(2000)
+);
+
+COPY public.feedback (id,feedback)
+FROM 's3://s3-bucket-name/'
+IAM_ROLE 'iam-role-arn'
+CSV
+IGNOREHEADER 1
+--DELIMITER ','
+--IGNOREBLANKLINES
+--REGION 'us-east-1'
+JOB CREATE job_auto_feedback AUTO ON;
+
+COPY JOB LIST;
+COPY JOB SHOW job_auto_feedback;
+COPY JOB RUN job_auto_feedback; -- Cannot run COPY job manually while auto copy is enabled. Disable auto copy if you need to run this job manually.
+--COPY JOB DROP job_auto_feedback;
+
+CREATE MATERIALIZED VIEW mv_autocopy_feedback AUTO REFRESH YES AS
+SELECT * FROM public.feedback;
+
+SELECT * FROM mv_autocopy_feedback;
+SELECT * FROM public.feedback;
+
+REFRESH MATERIALIZED VIEW mv_autocopy_feedback; -- Full refresh/recompute
+--end of Auto-copy
